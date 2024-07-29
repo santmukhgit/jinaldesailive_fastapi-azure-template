@@ -8,7 +8,6 @@ env:
   IMAGE_NAME: ${{ github.repository }}
   REGISTRY: ghcr.io
 
-{% raw %}
 jobs:
   build-fastapi-app:
     name: Build FastAPI App
@@ -46,4 +45,3 @@ jobs:
         run: |
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.VERSION_TAG }}
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-{% endraw %}  
