@@ -6,8 +6,8 @@ on:
 
 env:
   APP_NAME: ${{ values.app_name }}
-  GCP_PROJECT_ID: ${{ values.project_id }}
   REPO_NAME: terraform-${{ values.app_name }}
+  REGISTRY: ghcr.io
 
 {% raw %}
 jobs:
@@ -27,25 +27,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: configure gcp credentials
-        uses: google-github-actions/auth@v1
+      - name: Log into ${{ env.REGISTRY }}
+        uses: docker/login-action@v3.1.0
         with:
-          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: auth docker
-        run: gcloud --quiet auth configure-docker us-east4-docker.pkg.dev
+      - name: Set tag
+        run: echo "VERSION_TAG=$(git rev-parse --short=8 HEAD)" >> $GITHUB_OUTPUT
+        id: tag
       
-      - name: Build and push
+      - name: Build Application
         run: |
-          docker build --tag "us-east4-docker.pkg.dev/png-gcp-learning-poc/python-fastapi/${{ env.APP_NAME }}:${{github.run_number}}" .
+          docker build --tag "${{ env.REGISTRY }}/${{ env.APP_NAME }}:${{ steps.tag.outputs.VERSION_TAG }}" --tag "${{ env.REGISTRY }}/${{ env.APP_NAME }}:latest" .
       
-      - name: Push to artifact registry
+      # Use docker push command directly to work with docker login action.
+      - name: Push to ${{ env.REGISTRY }} registry
         run: |
-          docker push us-east4-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/python-fastapi/${{ env.APP_NAME }}:${{github.run_number}}
-          gcloud container images add-tag us-east4-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/python-fastapi/${{ env.APP_NAME }}:${{github.run_number}} us-east4-docker.pkg.dev/${{ env.GCP_PROJECT_ID }}/python-fastapi/${{ env.APP_NAME }}:latest
-
-      - name: Call CD workflow
-        run: |
-          curl -L -X POST -H "Accept: application/vnd.github+json" -H "Authorization: Bearer ${{ secrets.ORG_GITHUB_TOKEN }}" -H "X-GitHub-Api-Version: 2022-11-28" "https://api.github.com/repos/monkmantra/${{ env.REPO_NAME }}/dispatches" -d '{"event_type":"on-demand-test","client_payload":{"unit":false,"integration":true}}'
+          docker push ${{ env.REGISTRY }}/${{ env.APP_NAME }}:${{ steps.tag.outputs.VERSION_TAG }}
+          docker push ${{ env.REGISTRY }}/${{ env.APP_NAME }}:latest
 {% endraw %}  
