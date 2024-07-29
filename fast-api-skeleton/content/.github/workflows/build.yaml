@@ -3,7 +3,7 @@ name: Build python app
 on:
   push:
     branches: main
-
+{% raw %}
 env:
   IMAGE_NAME: ${{ github.repository }}
   REGISTRY: ghcr.io
@@ -45,3 +45,4 @@ jobs:
         run: |
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.VERSION_TAG }}
           docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+{% endraw %}  
