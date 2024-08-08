@@ -7,6 +7,10 @@ on:
 env:
   IMAGE_NAME: ${{ github.repository }}
   REGISTRY: ghcr.io
+  AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+  AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+  AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+  AZURE_ACR_NAME: ${{ vars.AZURE_ACR_NAME }}
 
 jobs:
   build-fastapi-app:
@@ -25,6 +29,18 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: configure azure credentials
+        uses: azure/login@v2
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      - name: login to azure acr
+        run: |
+          az acr login -n ${{ env.AZURE_ACR_NAME }}
+          echo "CONTAINER_REGISTRY=${{ env.AZURE_ACR_NAME }}.azurecr.io" >> "$GITHUB_ENV"
 
       - name: Log into ${{ env.REGISTRY }}
         uses: docker/login-action@v3.1.0
